@@ -10,6 +10,7 @@ import os
 import torch
 import argparse
 from PIL import Image
+import torch
 from torch.autograd import Variable
 import torchvision.utils as vutils
 import torchvision.datasets as datasets
@@ -94,7 +95,7 @@ def reshape(img, fineSize):
             img = img.resize((neww,newh))
     return img
 
-def easy_transfert(content,style,resize=512,alpha=0.5):
+def easy_transfert(content,style,resize=512,alpha=0.5,device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     content = default_loader(content)
     style = default_loader(style)
@@ -122,6 +123,6 @@ def easy_transfert(content,style,resize=512,alpha=0.5):
     print('Elapsed time is: %f' % (end_time - start_time))
     avgTime += (end_time - start_time)
 
-    print('Averaged time is %f' % (avgTime/(i+1)))
+    print('Averaged time is %f' % (avgTime))
 
     return image
