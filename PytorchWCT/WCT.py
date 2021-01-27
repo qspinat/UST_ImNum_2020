@@ -8,7 +8,6 @@ import torchvision.datasets as datasets
 from Loader import Dataset
 from util import *
 import scipy.misc
-from torch.utils.serialization import load_lua
 import time
 
 parser = argparse.ArgumentParser(description='WCT Pytorch')
