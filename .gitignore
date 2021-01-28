@@ -131,3 +131,6 @@ dmypy.json
 
 #models
 PytorchWCT/models/*
+
+#images
+PytorchWCT/images/*
