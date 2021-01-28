@@ -7,11 +7,11 @@ Created on Wed Jan 27 19:10:49 2021
 """
 
 import os
+import numpy as np
 import torch
 import argparse
 from PIL import Image
 import torch
-import numpy as np
 from torch.autograd import Variable
 import torchvision.utils as vutils
 import torchvision.datasets as datasets
@@ -23,7 +23,7 @@ from types import SimpleNamespace
 
 
 
-def styleTransfer(contentImg,styleImg,csF,alpha=0.5, device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def styleTransfer(contentImg,styleImg,csF,alpha=0.5, color="style", device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     vgg1 = 'models/vgg_normalised_conv1_1.t7'
     vgg2 = 'models/vgg_normalised_conv2_1.t7'
@@ -43,7 +43,7 @@ def styleTransfer(contentImg,styleImg,csF,alpha=0.5, device = torch.device("cuda
     args = SimpleNamespace(vgg1=vgg1, vgg2=vgg2, vgg3=vgg3, vgg4=vgg4, vgg5=vgg5, decoder1=decoder1, decoder2=decoder2, decoder3=decoder3, decoder4=decoder4, decoder5=decoder5)
 
     wct = WCT(args).to(device)
-    
+
     if len(np.shape(alpha))==0:
         alpha = [alpha,alpha,alpha,alpha,alpha]
 
@@ -75,7 +75,12 @@ def styleTransfer(contentImg,styleImg,csF,alpha=0.5, device = torch.device("cuda
     csF2 = wct.transform(cF2,sF2,csF,alpha[3])
     Im2 = wct.d2(csF2)
 
-    sF1 = wct.e1(styleImg)
+    if color=="style":
+      sF1 = wct.e1(styleImg)
+    elif color=="content":
+      sF1 = wct.e1(contentImg)
+    else:
+      print("no color specified")
     cF1 = wct.e1(Im2)
     sF1 = sF1.data.cpu().squeeze(0)
     cF1 = cF1.data.cpu().squeeze(0)
@@ -99,13 +104,15 @@ def reshape(img, fineSize):
             img = img.resize((neww,newh))
     return img
 
-def easy_transfert(content,style,resize=512,alpha=0.5,device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def easy_transfert(content,style,resize_content=512,resize_style=512,alpha=0.5,color="style", device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     content = default_loader(content)
     style = default_loader(style)
 
-    content = reshape(content,resize)
-    style = reshape(style,resize)
+    if resize_content!=0:
+      content = reshape(content,resize_content)
+    if resize_style!=0:
+      style = reshape(style,resize_style)
 
     content = transforms.ToTensor()(content)
     style = transforms.ToTensor()(style)
@@ -121,7 +128,7 @@ def easy_transfert(content,style,resize=512,alpha=0.5,device=torch.device("cuda:
     start_time = time.time()
     # WCT Style Transfer
 
-    image = styleTransfer(cImg,sImg,csF,alpha=alpha)
+    image = styleTransfer(cImg,sImg,csF,alpha=alpha, color=color, device=device)
 
     end_time = time.time()
     print('Elapsed time is: %f' % (end_time - start_time))

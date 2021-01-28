@@ -75,6 +75,7 @@ class WCT(nn.Module):
         s_d = (s_e[0:k_s]).pow(0.5)
         targetFeature = torch.mm(torch.mm(torch.mm(s_v[:,0:k_s],torch.diag(s_d)),(s_v[:,0:k_s].t())),whiten_cF)
         targetFeature = targetFeature + s_mean.unsqueeze(1).expand_as(targetFeature)
+
         return targetFeature
 
     def transform(self,cF,sF,csF,alpha):
@@ -92,3 +93,4 @@ class WCT(nn.Module):
         with torch.no_grad():
           csF.resize_(ccsF.size()).copy_(ccsF)
         return csF
+
