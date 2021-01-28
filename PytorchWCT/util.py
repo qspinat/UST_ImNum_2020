@@ -7,38 +7,39 @@ import argparse
 import time
 import os
 from PIL import Image
-from modelsNIPS import decoder1,decoder2,decoder3,decoder4,decoder5
-from modelsNIPS import encoder1,encoder2,encoder3,encoder4,encoder5
+from modelsNIPS import encoder, decoder
 import torch.nn as nn
 
-
+import sys
+if sys.version_info >= (3,):
+    xrange = range
 
 class WCT(nn.Module):
     def __init__(self,args):
         super(WCT, self).__init__()
         # load pre-trained network
-        vgg1 = torchfile.load(args.vgg1)
-        decoder1_torch = torchfile.load(args.decoder1)
-        vgg2 = torchfile.load(args.vgg2)
-        decoder2_torch = torchfile.load(args.decoder2)
-        vgg3 = torchfile.load(args.vgg3)
-        decoder3_torch = torchfile.load(args.decoder3)
-        vgg4 = torchfile.load(args.vgg4)
-        decoder4_torch = torchfile.load(args.decoder4)
-        vgg5 = torchfile.load(args.vgg5)
-        decoder5_torch = torchfile.load(args.decoder5)
+        vgg1 = torchfile.load(args.vgg1, force_8bytes_long=True)
+        decoder1_torch = torchfile.load(args.decoder1, force_8bytes_long=True)
+        vgg2 = torchfile.load(args.vgg2, force_8bytes_long=True)
+        decoder2_torch = torchfile.load(args.decoder2, force_8bytes_long=True)
+        vgg3 = torchfile.load(args.vgg3, force_8bytes_long=True)
+        decoder3_torch = torchfile.load(args.decoder3, force_8bytes_long=True)
+        vgg4 = torchfile.load(args.vgg4, force_8bytes_long=True)
+        decoder4_torch = torchfile.load(args.decoder4, force_8bytes_long=True)
+        vgg5 = torchfile.load(args.vgg5, force_8bytes_long=True)
+        decoder5_torch = torchfile.load(args.decoder5, force_8bytes_long=True)
 
 
-        self.e1 = encoder1(vgg1)
-        self.d1 = decoder1(decoder1_torch)
-        self.e2 = encoder2(vgg2)
-        self.d2 = decoder2(decoder2_torch)
-        self.e3 = encoder3(vgg3)
-        self.d3 = decoder3(decoder3_torch)
-        self.e4 = encoder4(vgg4)
-        self.d4 = decoder4(decoder4_torch)
-        self.e5 = encoder5(vgg5)
-        self.d5 = decoder5(decoder5_torch)
+        self.e1 = encoder(1,vgg1)
+        self.d1 = decoder(1,decoder1_torch)
+        self.e2 = encoder(2,vgg2)
+        self.d2 = decoder(2,decoder2_torch)
+        self.e3 = encoder(3,vgg3)
+        self.d3 = decoder(3,decoder3_torch)
+        self.e4 = encoder(4,vgg4)
+        self.d4 = decoder(4,decoder4_torch)
+        self.e5 = encoder(5,vgg5)
+        self.d5 = decoder(5,decoder5_torch)
 
     def whiten_and_color(self,cF,sF):
         cFSize = cF.size()
