@@ -18,16 +18,16 @@ class encoder(nn.Module):
             kernel_size = 1 if i == 0 else 3
             conv = torch.nn.Conv2d(sizes[i], sizes[i + 1], kernel_size, 1, 0)
             # load weights and biases
-            # conv.weight = torch.nn.Parameter(torch.tensor(vgg.modules[num_load].weight).float())
-            # conv.bias = torch.nn.Parameter(torch.tensor(vgg.modules[num_load].bias).float())
+            conv.weight = torch.nn.Parameter(torch.tensor(vgg.modules[num_load].weight).float())
+            conv.bias = torch.nn.Parameter(torch.tensor(vgg.modules[num_load].bias).float())
             convs += [conv]
 
         self.enc_number = enc_number
         self.num_layers = num_layers
-        self.convs = convs
-        self.reflecPads = reflecPads
-        self.relus = relus
-        self.maxPools = maxPools
+        self.convs = nn.ModuleList(convs)
+        self.reflecPads = nn.ModuleList(reflecPads)
+        self.relus = nn.ModuleList(relus)
+        self.maxPools = nn.ModuleList(maxPools)
 
     def forward(self,x):
         out = x
@@ -38,8 +38,8 @@ class encoder(nn.Module):
             out = self.convs[i](out)
             if i == 0:
                 out = self.reflecPads[i](out)
-            elif i != 1:
-                out = self.relus[i if i == 0 else i - 1](out)
+            else:
+                out = self.relus[i - 1](out)
             if i in [2, 4, 8, 12]:
                 out, _ = self.maxPools[pool_index](out)
                 pool_index += 1
@@ -71,10 +71,10 @@ class decoder(nn.Module):
 
         self.dec_number = dec_number
         self.num_layers = num_layers
-        self.convs = convs
-        self.reflecPads = reflecPads
-        self.relus = relus
-        self.unPools = unPools
+        self.convs = nn.ModuleList(convs)
+        self.reflecPads = nn.ModuleList(reflecPads)
+        self.relus = nn.ModuleList(relus)
+        self.unPools = nn.ModuleList(unPools)
 
     def forward(self,x):
         out = x
@@ -84,7 +84,7 @@ class decoder(nn.Module):
             out = self.convs[i](out)
             if i != self.num_layers - 1:
                 out = self.relus[i](out)
-            if i in [1, 4, 8, 10]:
+            if self.num_layers - i - 1 in [2, 4, 8, 12]:
                 out = self.unPools[pool_index](out)
                 pool_index += 1
         return out
