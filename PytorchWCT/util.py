@@ -9,6 +9,7 @@ import os
 from PIL import Image
 from modelsNIPS import encoder, decoder
 import torch.nn as nn
+from assignment import FIST_features
 
 import sys
 if sys.version_info >= (3,):
@@ -95,3 +96,51 @@ class WCT(nn.Module):
           csF.resize_(ccsF.size()).copy_(ccsF)
         return csF
 
+class WCT_bis(nn.Module):
+    def __init__(self,args):
+        super(WCT_bis, self).__init__()
+        # load pre-trained network
+        vgg1 = torchfile.load(args.vgg1, force_8bytes_long=True)
+        decoder1_torch = torchfile.load(args.decoder1, force_8bytes_long=True)
+        vgg2 = torchfile.load(args.vgg2, force_8bytes_long=True)
+        decoder2_torch = torchfile.load(args.decoder2, force_8bytes_long=True)
+        vgg3 = torchfile.load(args.vgg3, force_8bytes_long=True)
+        decoder3_torch = torchfile.load(args.decoder3, force_8bytes_long=True)
+        vgg4 = torchfile.load(args.vgg4, force_8bytes_long=True)
+        decoder4_torch = torchfile.load(args.decoder4, force_8bytes_long=True)
+        vgg5 = torchfile.load(args.vgg5, force_8bytes_long=True)
+        decoder5_torch = torchfile.load(args.decoder5, force_8bytes_long=True)
+
+
+        self.e1 = encoder(1,vgg1)
+        self.d1 = decoder(1,decoder1_torch)
+        self.e2 = encoder(2,vgg2)
+        self.d2 = decoder(2,decoder2_torch)
+        self.e3 = encoder(3,vgg3)
+        self.d3 = decoder(3,decoder3_torch)
+        self.e4 = encoder(4,vgg4)
+        self.d4 = decoder(4,decoder4_torch)
+        self.e5 = encoder(5,vgg5)
+        self.d5 = decoder(5,decoder5_torch)
+
+    def FIST(self,cF,sF):
+        targetFeature = FIST_features(cF.permute(1,2,0).numpy(),sF.permute(1,2,0).permute,200,dim=cF.shape[0],c=None)
+        targetFeature = torch.Tensor(targetFeature.permute(2,0,1))
+
+        return targetFeature
+
+    def transform(self,cF,sF,csF,alpha):
+        cF = cF.double()
+        sF = sF.double()
+        C,W,H = cF.size(0),cF.size(1),cF.size(2)
+        _,W1,H1 = sF.size(0),sF.size(1),sF.size(2)
+        cFView = cF.view(C,-1)
+        sFView = sF.view(C,-1)
+
+        targetFeature = self.FIST(cFView,sFView)
+        targetFeature = targetFeature.view_as(cF)
+        ccsF = alpha * targetFeature + (1.0 - alpha) * cF
+        ccsF = ccsF.float().unsqueeze(0)
+        with torch.no_grad():
+          csF.resize_(ccsF.size()).copy_(ccsF)
+        return csF
