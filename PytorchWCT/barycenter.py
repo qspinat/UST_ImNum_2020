@@ -23,7 +23,7 @@ import time
 from types import SimpleNamespace
 
 
-def styleTransferBarycenter(contentImg,styleImgs,csF,alphas, method=["WCT","WCT","WCT","WCT","WCT"], device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def styleTransferBarycenter(contentImg,styleImgs,csF,alphas, color, method=["WCT","WCT","WCT","WCT","WCT"], device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     vgg1 = 'models/vgg_normalised_conv1_1.t7'
     vgg2 = 'models/vgg_normalised_conv2_1.t7'
@@ -71,15 +71,22 @@ def styleTransferBarycenter(contentImg,styleImgs,csF,alphas, method=["WCT","WCT"
 
     cF1 = wct.e1(Im2)
     cF1 = cF1.data.cpu().squeeze(0)
-    sF1s = [wct.e1(styleImg) for styleImg in styleImgs]
-    sF1s = [sF1.data.cpu().squeeze(0) for sF1 in sF1s]
-    csF1 = wct.transformBarycenter(cF1,sF1s,csF,alphas[4],method=method[4],n_iter=100)
+    if color == 'style':
+        sF1s = [wct.e1(styleImg) for styleImg in styleImgs]
+        sF1s = [sF1.data.cpu().squeeze(0) for sF1 in sF1s]
+        csF1 = wct.transformBarycenter(cF1,sF1s,csF,alphas[4],method=method[4],n_iter=100)
+    elif color == 'content'
+        sF1 = wct.e1(contentImg)
+        sF1 = sF1.data.cpu().squeeze(0)
+        csF1 = wct.transform(cF1,sF1,csF,sum(alpha[4]),method=method[4],n_iter=100)
+    else:
+        print('Color "' + color + '" not defined')
     Im1 = wct.d1(csF1)
     # save_image has this wired design to pad images with 4 pixels at default.
     #vutils.save_image(Im1.data.cpu().float(),os.path.join(args.outf,imname))
     return Im1[0].cpu().detach().permute(1,2,0).numpy()
 
-def style_barycenter(content,styles,resize_content=512,resize_style=512,alphas=None, method=["WCT","WCT","WCT","WCT","WCT"],device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def style_barycenter(content,styles,resize_content=512,resize_style=512,alphas=None, color="style", method=["WCT","WCT","WCT","WCT","WCT"],device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     if alphas is None
         # set alpha uniformly
@@ -106,7 +113,7 @@ def style_barycenter(content,styles,resize_content=512,resize_style=512,alphas=N
     sImgs = [Variable(style[None,:],volatile=True).to(device) for style in styles]
     start_time = time.time()
     # WCT Style Transfer
-    image = styleTransferBarycenter(cImg,sImgs,csF,alphas, device=device, method=method)
+    image = styleTransferBarycenter(cImg,sImgs,csF,alphas, color=color device=device, method=method)
 
     end_time = time.time()
     print('Elapsed time is: %f' % (end_time - start_time))
