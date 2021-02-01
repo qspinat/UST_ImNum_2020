@@ -122,6 +122,7 @@ class WCT(nn.Module):
             targetFeature = targetFeature.view_as(cF)
             targetFeatures += [targetFeature]
         targetFeatures += [cF]
+        alphas += [1 - sum(alphas)]
         ccsF = sum([alpha * targetFeature for alpha,targetFeature in zip(alphas,targetFeatures)])
         ccsF = ccsF.float().unsqueeze(0)
         with torch.no_grad():
