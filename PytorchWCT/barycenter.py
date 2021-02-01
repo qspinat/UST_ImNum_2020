@@ -16,6 +16,7 @@ from torch.autograd import Variable
 import torchvision.utils as vutils
 import torchvision.datasets as datasets
 from Loader import Dataset, default_loader
+from new_func import reshape
 from util import *
 import scipy.misc
 import time
@@ -23,7 +24,7 @@ from types import SimpleNamespace
 
 
 
-def styleTransfer(contentImg,styleImg,csF,alpha=0.5, color="style", method=["WCT","WCT","WCT","WCT","WCT"], device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+def styleTransferBarycenter(contentImg,styleImgs,csF,alphas, color="style", method=["WCT","WCT","WCT","WCT","WCT"], device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
     vgg1 = 'models/vgg_normalised_conv1_1.t7'
     vgg2 = 'models/vgg_normalised_conv2_1.t7'
@@ -41,93 +42,81 @@ def styleTransfer(contentImg,styleImg,csF,alpha=0.5, color="style", method=["WCT
 
     wct = WCT(args).to(device)
 
-    if len(np.shape(alpha))==0:
-        alpha = [alpha,alpha,alpha,alpha,alpha]
-
-    sF5 = wct.e5(styleImg)
+    sF5s = [wct.e5(styleImg) for styleImg in styleImgs]
     cF5 = wct.e5(contentImg)
-    sF5 = sF5.data.cpu().squeeze(0)
+    sF5s = [sF5.data.cpu().squeeze(0) for sF5 in sF5s]
     cF5 = cF5.data.cpu().squeeze(0)
-    csF5 = wct.transform(cF5,sF5,csF,alpha[0],method=method[0],n_iter=5000)
+    csF5 = wct.transformBarycenter(cF5,sF5s,csF,alphas,method=method[0],n_iter=5000)
     Im5 = wct.d5(csF5)
 
-    sF4 = wct.e4(styleImg)
+    sF4s = [wct.e4(styleImg) for styleImg in styleImgs]
     cF4 = wct.e4(Im5)
-    sF4 = sF4.data.cpu().squeeze(0)
+    sF4s = [sF4.data.cpu().squeeze(0) for sF4 in sF4s]
     cF4 = cF4.data.cpu().squeeze(0)
-    csF4 = wct.transform(cF4,sF4,csF,alpha[1],method=method[1],n_iter=3000)
+    csF4 = wct.transformBarycenter(cF4,sF4s,csF,alphas,method=method[1],n_iter=3000)
     Im4 = wct.d4(csF4)
 
-    sF3 = wct.e3(styleImg)
+    sF3s = [wct.e3(styleImg) for styleImg in styleImgs]
     cF3 = wct.e3(Im4)
-    sF3 = sF3.data.cpu().squeeze(0)
+    sF3s = [sF3.data.cpu().squeeze(0) for sF3 in sF3s]
     cF3 = cF3.data.cpu().squeeze(0)
-    csF3 = wct.transform(cF3,sF3,csF,alpha[2],method=method[2],n_iter=2000)
+    csF3 = wct.transformBarycenter(cF3,sF3s,csF,alphas,method=method[2],n_iter=2000)
     Im3 = wct.d3(csF3)
 
-    sF2 = wct.e2(styleImg)
+    sF2s = [wct.e2(styleImg) for styleImg in styleImgs]
     cF2 = wct.e2(Im3)
-    sF2 = sF2.data.cpu().squeeze(0)
+    sF2s = [sF2.data.cpu().squeeze(0) for sF2 in sF2s]
     cF2 = cF2.data.cpu().squeeze(0)
-    csF2 = wct.transform(cF2,sF2,csF,alpha[3],method=method[3],n_iter=300)
+    csF2 = wct.transformBarycenter(cF2,sF2s,csF,alphas,method=method[3],n_iter=300)
     Im2 = wct.d2(csF2)
 
+    cF1 = wct.e1(Im2)
+    cF1 = cF1.data.cpu().squeeze(0)
     if color=="style":
-      sF1 = wct.e1(styleImg)
+      sF1s = [wct.e1(styleImg) for styleImg in styleImgs]
+      sF1s = [sF1.data.cpu().squeeze(0) for sF1 in sF1s]
+      csF1 = wct.transformBarycenter(cF1,sF1s,csF,alphas,method=method[4],n_iter=100)
     elif color=="content":
       sF1 = wct.e1(contentImg)
+      sF1 = sF1.data.cpu().squeeze(0)
+      csF1 = wct.transform(cF1,sF1,csF,1 - alphas[-1],method=method[4],n_iter=100)
     else:
       print("no color specified")
-    cF1 = wct.e1(Im2)
-    sF1 = sF1.data.cpu().squeeze(0)
-    cF1 = cF1.data.cpu().squeeze(0)
-    csF1 = wct.transform(cF1,sF1,csF,alpha[4],method=method[4],n_iter=100)
     Im1 = wct.d1(csF1)
     # save_image has this wired design to pad images with 4 pixels at default.
     #vutils.save_image(Im1.data.cpu().float(),os.path.join(args.outf,imname))
     return Im1[0].cpu().detach().permute(1,2,0).numpy()
 
-def reshape(img, fineSize):
-    w,h = img.size
-    if (w > h):
-        if (w != fineSize):
-            neww = fineSize
-            newh = int(h*neww/w)
-            img = img.resize((neww,newh))
-    else:
-        if (h != fineSize):
-            newh = fineSize
-            neww = int(w*newh/h)
-            img = img.resize((neww,newh))
-    return img
+def style_barycenter(content,styles,resize_content=512,resize_style=512,alphas=None,color="style", method=["WCT","WCT","WCT","WCT","WCT"],device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
 
-def easy_transfert(content,style,resize_content=512,resize_style=512,alpha=0.5,color="style", method=["WCT","WCT","WCT","WCT","WCT"],device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
+    if not alphas:
+        # set alpha uniformly
+        alphas = [1 / (len(styles) + 1) for _ in styles]
 
     content = default_loader(content)
-    style = default_loader(style)
+    styles = [default_loader(style) for style in styles]
 
     if resize_content!=0:
       content = reshape(content,resize_content)
     if resize_style!=0:
-      style = reshape(style,resize_style)
+      styles = [reshape(style,resize_style) for style in styles]
 
     content = transforms.ToTensor()(content)
-    style = transforms.ToTensor()(style)
+    styles = [transforms.ToTensor()(style) for style in styles]
 
     avgTime = 0
-    cImg = torch.Tensor().to(device)
-    sImg = torch.Tensor().to(device)
+    #cImg = torch.Tensor().to(device)
+    #sImgs = [torch.Tensor().to(device) for _ in styles]
     csF = torch.Tensor().to(device)
     csF = Variable(csF).to(device)
 
     cImg = Variable(content[None,:],volatile=True).to(device)
-    sImg = Variable(style[None,:],volatile=True).to(device)
+    sImgs = [Variable(style[None,:],volatile=True).to(device) for style in styles]
     start_time = time.time()
     # WCT Style Transfer
-    image = styleTransfer(cImg,sImg,csF,alpha=alpha, color=color, device=device, method=method)
+    image = styleTransferBarycenter(cImg,sImgs,csF,alphas, color=color, device=device, method=method)
 
     end_time = time.time()
     print('Elapsed time is: %f' % (end_time - start_time))
 
     return image
-

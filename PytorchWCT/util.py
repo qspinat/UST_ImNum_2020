@@ -103,3 +103,28 @@ class WCT(nn.Module):
           csF.resize_(ccsF.size()).copy_(ccsF)
         return csF
 
+    def transformBarycenter(self,cF,sFs,csF,alphas,method="WCT",n_iter=300):
+        cF = cF.double()
+        targetFeatures = []
+        for sF in sFs:
+            sF = sF.double()
+            C,W,H = cF.size(0),cF.size(1),cF.size(2)
+            _,W1,H1 = sF.size(0),sF.size(1),sF.size(2)
+            cFView = cF.view(C,-1)
+            sFView = sF.view(C,-1)
+
+            if method=="WCT":
+                targetFeature = self.whiten_and_color(cFView,sFView)
+            elif method=="FIST":
+                targetFeature = self.FIST(cFView,sFView,n_iter=n_iter)
+            else:
+                print("no method specifiedinwct.transform")
+            targetFeature = targetFeature.view_as(cF)
+            targetFeatures += [targetFeature]
+        targetFeatures += [cF]
+        ccsF = sum([alpha * targetFeature for alpha,targetFeature in zip(alphas,targetFeatures)])
+        ccsF = ccsF.float().unsqueeze(0)
+        with torch.no_grad():
+          csF.resize_(ccsF.size()).copy_(ccsF)
+        return csF
+
