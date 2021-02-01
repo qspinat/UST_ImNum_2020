@@ -75,7 +75,7 @@ def styleTransferBarycenter(contentImg,styleImgs,csF,alphas, color, method=["WCT
         sF1s = [wct.e1(styleImg) for styleImg in styleImgs]
         sF1s = [sF1.data.cpu().squeeze(0) for sF1 in sF1s]
         csF1 = wct.transformBarycenter(cF1,sF1s,csF,alphas[4],method=method[4],n_iter=100)
-    elif color == 'content'
+    elif color == 'content':
         sF1 = wct.e1(contentImg)
         sF1 = sF1.data.cpu().squeeze(0)
         csF1 = wct.transform(cF1,sF1,csF,sum(alpha[4]),method=method[4],n_iter=100)
