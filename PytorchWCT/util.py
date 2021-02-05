@@ -95,7 +95,7 @@ class WCT(nn.Module):
         elif method=="FIST":
             targetFeature = self.FIST(cFView,sFView,n_iter=n_iter)
         else:
-            print("no method specifiedinwct.transform")
+            print("no method specified in wct.transform")
         targetFeature = targetFeature.view_as(cF)
         ccsF = alpha * targetFeature + (1.0 - alpha) * cF
         ccsF = ccsF.float().unsqueeze(0)
@@ -118,12 +118,11 @@ class WCT(nn.Module):
             elif method=="FIST":
                 targetFeature = self.FIST(cFView,sFView,n_iter=n_iter)
             else:
-                print("no method specifiedinwct.transform")
+                print("no method specified in wct.transform")
             targetFeature = targetFeature.view_as(cF)
             targetFeatures += [targetFeature]
-        targetFeatures += [cF]
-        alphas += [1 - sum(alphas)]
         ccsF = sum([alpha * targetFeature for alpha,targetFeature in zip(alphas,targetFeatures)])
+        ccsF = ccsF + (1.0 - sum(alphas))*cF
         ccsF = ccsF.float().unsqueeze(0)
         with torch.no_grad():
           csF.resize_(ccsF.size()).copy_(ccsF)
